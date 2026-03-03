@@ -1,8 +1,9 @@
 blueprint:
   name: "Perilay — Météo du jour"
   description: >
-    Imprime chaque matin un résumé météo sur une imprimante thermique PeriPage.
-    Contenu : titre, date, conditions, température actuelle, min/max du jour.
+    Imprime chaque matin un résumé météo complet sur une imprimante thermique PeriPage.
+    Contenu : titre, date, conditions, température actuelle, min/max, vent, pression,
+    humidité et une phrase selon la météo du jour.
 
     Prérequis :
       - Addon Perilay installé et configuré
@@ -60,72 +61,125 @@ variables:
   ha_ip: !input ha_ip
   ha_port: !input ha_port
 
-  # Conditions traduites en français
   condition_map:
-    clear-night: "Nuit claire ✨"
-    cloudy: "Nuageux ☁️"
-    exceptional: "Conditions exceptionnelles ⚠️"
-    fog: "Brouillard 🌫️"
-    hail: "Grêle 🌨️"
-    lightning: "Orage ⚡"
-    lightning-rainy: "Orage pluvieux ⛈️"
-    partlycloudy: "Partiellement nuageux ⛅"
-    pouring: "Pluie forte 🌧️"
-    rainy: "Pluvieux 🌦️"
-    snowy: "Neigeux ❄️"
-    snowy-rainy: "Neige et pluie 🌨️"
-    sunny: "Ensoleillé ☀️"
-    windy: "Venteux 💨"
-    windy-variant: "Très venteux 💨"
+    clear-night: "Nuit claire"
+    cloudy: "Nuageux"
+    exceptional: "Conditions exceptionnelles"
+    fog: "Brouillard"
+    hail: "Grele"
+    lightning: "Orage"
+    lightning-rainy: "Orage pluvieux"
+    partlycloudy: "Partiellement nuageux"
+    pouring: "Pluie forte"
+    rainy: "Pluvieux"
+    snowy: "Neigeux"
+    snowy-rainy: "Neige et pluie"
+    sunny: "Ensoleille"
+    windy: "Venteux"
+    windy-variant: "Tres venteux"
+
+  # Catégories pour la phrase finale
+  sunny_conditions:
+    - sunny
+    - clear-night
+  rainy_conditions:
+    - rainy
+    - pouring
+    - lightning-rainy
+    - snowy-rainy
+    - hail
+    - lightning
+  night_conditions:
+    - clear-night
 
   condition_raw: "{{ states(weather_entity) }}"
-  condition_label: >
-    {{ condition_map.get(condition_raw, condition_raw) }}
+  condition_label: "{{ condition_map.get(condition_raw, condition_raw) }}"
 
-  temperature: >
-    {{ state_attr(weather_entity, 'temperature') | round(1) }}°C
+  temperature: "{{ state_attr(weather_entity, 'temperature') | round(1) }}C"
+  humidity: >
+    {% set h = state_attr(weather_entity, 'humidity') %}
+    {{ h ~ ' %' if h is not none else 'N/A' }}
+  wind_speed: >
+    {% set w = state_attr(weather_entity, 'wind_speed') %}
+    {% set u = state_attr(weather_entity, 'wind_speed_unit') | default('km/h') %}
+    {{ (w | round(1) ~ ' ' ~ u) if w is not none else 'N/A' }}
+  pressure: >
+    {% set p = state_attr(weather_entity, 'pressure') %}
+    {% set u = state_attr(weather_entity, 'pressure_unit') | default('hPa') %}
+    {{ (p | round(0) | int ~ ' ' ~ u) if p is not none else 'N/A' }}
 
-  temp_unit: >
-    {{ state_attr(weather_entity, 'temperature_unit') | default('°C') }}
-
-  forecast_today: >
-    {% set forecasts = state_attr(weather_entity, 'forecast') %}
-    {% if forecasts and forecasts | length > 0 %}
-      {{ forecasts[0] }}
+  # Phrase finale selon la météo
+  closing_phrase: >
+    {% if condition_raw in night_conditions %}
+    {% elif condition_raw in sunny_conditions %}
+      Soleil radieux aujourd'hui !
+    {% elif condition_raw in rainy_conditions %}
+      Il faudra prendre son parapluie aujourd'hui :)
     {% else %}
-      {}
-    {% endif %}
-
-  temp_low: >
-    {% set f = state_attr(weather_entity, 'forecast') %}
-    {% if f and f | length > 0 and f[0].templow is defined %}
-      {{ f[0].templow | round(1) }}°C
-    {% else %}
-      N/A
-    {% endif %}
-
-  temp_high: >
-    {% set f = state_attr(weather_entity, 'forecast') %}
-    {% if f and f | length > 0 and f[0].temperature is defined %}
-      {{ f[0].temperature | round(1) }}°C
-    {% else %}
-      N/A
+      Esperons qu'il fera meilleur demain !
     {% endif %}
 
 action:
-  - service: rest_command.peripage_print
+  # Étape 1 : récupérer les prévisions via le service dédié
+  - service: weather.get_forecasts
+    target:
+      entity_id: !input weather_entity
     data:
-      payload: >-
-        {"blocks": [
-          {"type": "title", "text": "Météo du Jour", "align": "center"},
-          {"type": "text", "text": "{{ now().strftime('%A %d %B %Y') }}", "align": "center", "font_size": 20},
-          {"type": "separator", "style": "line"},
-          {"type": "text", "text": "{{ condition_label }}", "align": "center", "font_size": 26, "bold": true},
-          {"type": "separator", "style": "blank"},
-          {"type": "text", "text": "Actuellement : {{ temperature }}", "align": "center", "font_size": 24},
-          {"type": "separator", "style": "blank"},
-          {"type": "list", "items": ["Min : {{ temp_low }}", "Max : {{ temp_high }}"], "bullet": "▸", "font_size": 22},
-          {"type": "separator", "style": "dotted"}
-        ]}
+      type: daily
+    response_variable: forecasts
+
+  # Étape 2 : extraire min/max
+  - variables:
+      temp_low: >
+        {% set f = forecasts[weather_entity].forecast %}
+        {% if f and f | length > 0 and f[0].templow is defined %}
+          {{ f[0].templow | round(1) }}C
+        {% else %}
+          N/A
+        {% endif %}
+      temp_high: >
+        {% set f = forecasts[weather_entity].forecast %}
+        {% if f and f | length > 0 and f[0].temperature is defined %}
+          {{ f[0].temperature | round(1) }}C
+        {% else %}
+          N/A
+        {% endif %}
+
+  # Étape 3 : imprimer sans phrase si nuit, avec phrase sinon
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ closing_phrase | trim == '' }}"
+        sequence:
+          - service: rest_command.peripage_print
+            data:
+              payload: >-
+                {"blocks": [
+                  {"type": "title", "text": "Meteo du Jour", "align": "center"},
+                  {"type": "text", "text": "{{ now().strftime('%A %d %B %Y') }}", "align": "center", "font_size": 20},
+                  {"type": "separator", "style": "line"},
+                  {"type": "text", "text": "{{ condition_label }}", "align": "center", "font_size": 26, "bold": true},
+                  {"type": "separator", "style": "blank"},
+                  {"type": "text", "text": "Actuellement : {{ temperature }}", "align": "center", "font_size": 24},
+                  {"type": "separator", "style": "blank"},
+                  {"type": "list", "items": ["Min : {{ temp_low }}", "Max : {{ temp_high }}", "Humidite : {{ humidity }}", "Vent : {{ wind_speed }}", "Pression : {{ pressure }}"], "bullet": "->", "font_size": 22},
+                  {"type": "separator", "style": "dotted"}
+                ]}
+    default:
+      - service: rest_command.peripage_print
+        data:
+          payload: >-
+            {"blocks": [
+              {"type": "title", "text": "Meteo du Jour", "align": "center"},
+              {"type": "text", "text": "{{ now().strftime('%A %d %B %Y') }}", "align": "center", "font_size": 20},
+              {"type": "separator", "style": "line"},
+              {"type": "text", "text": "{{ condition_label }}", "align": "center", "font_size": 26, "bold": true},
+              {"type": "separator", "style": "blank"},
+              {"type": "text", "text": "Actuellement : {{ temperature }}", "align": "center", "font_size": 24},
+              {"type": "separator", "style": "blank"},
+              {"type": "list", "items": ["Min : {{ temp_low }}", "Max : {{ temp_high }}", "Humidite : {{ humidity }}", "Vent : {{ wind_speed }}", "Pression : {{ pressure }}"], "bullet": "->", "font_size": 22},
+              {"type": "separator", "style": "line"},
+              {"type": "text", "text": "{{ closing_phrase | trim }}", "align": "center", "font_size": 22}
+            ]}
 
 mode: single
