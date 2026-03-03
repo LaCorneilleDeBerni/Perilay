@@ -1,4 +1,4 @@
-# Perilay — Home Assistant Addon
+# Perilay — Peripage Home Assistant Addon
 
 Addon Home Assistant pour composer et imprimer des pages structurées sur une imprimante thermique **PeriPage** via Bluetooth.
 
