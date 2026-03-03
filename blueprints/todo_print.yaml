@@ -43,7 +43,7 @@ blueprint:
             text:
 
         ha_port:
-          name: Port de l'addon PeriPage Layout
+          name: Port de l'addon Perilay
           description: Port HTTP configuré dans l'addon (défaut 8766).
           default: 8766
           selector:
