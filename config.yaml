@@ -1,0 +1,34 @@
+name: "Perilay"
+description: "Mise en page et impression sur imprimante thermique PeriPage via Bluetooth"
+version: "1.4.0"
+slug: perilay
+url: "https://github.com/LaCorneilleDeBerni/perilay-addon"
+documentation: "https://github.com/LaCorneilleDeBerni/perilay-addon/blob/main/DOCS.md"
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+init: false
+privileged:
+  - NET_ADMIN
+host_network: true
+bluetooth: true
+hassio_api: true
+homeassistant_api: true
+options:
+  printer_mac: "XX:XX:XX:XX:XX:XX"
+  printer_model: "A6"
+  font: "DejaVu"
+  font_size: 24
+  port: 8766
+  custom_fonts: []
+schema:
+  printer_mac: str
+  printer_model: list(A6|A6p|A40|A40p)
+  font: list(DejaVu|DejaVuBold|Liberation)
+  font_size: int
+  port: int
+  custom_fonts:
+    - name: str
+      url: str
