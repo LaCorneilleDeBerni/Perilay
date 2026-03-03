@@ -20,7 +20,7 @@ blueprint:
       input:
         prenom:
           name: Prenom
-          description: Prenom affiche dans le titre (ex. Sophie -> "Bonjour Sophie !").
+          description: "Prenom affiche dans le titre."
           default: "Sophie"
           selector:
             text:
@@ -46,16 +46,14 @@ blueprint:
 
         image_folder:
           name: Dossier des images
-          description: "Chemin relatif depuis /local/ (ex. Maurice, images, photos)."
+          description: "Chemin relatif depuis /local/ (ex. images, photos)."
           default: "images"
           selector:
             text:
 
         image_prefix:
           name: "Prefixe des images"
-          description: >
-            Debut du nom de vos fichiers avant le numero.
-            Exemple : Maurice_00001.png -> entrez Maurice_
+          description: "Debut du nom de vos fichiers avant le numero (ex. image_)."
           default: "image_"
           selector:
             text:
@@ -186,31 +184,54 @@ variables:
     {% set opts = state_attr(closings_entity, 'options') %}
     {{ opts | random }}
 
-  rdv_list: >
-    {% set calendars = [calendar_1_entity, calendar_2_entity, calendar_3_entity] %}
-    {% set ns = namespace(rdvs=[]) %}
-    {% for cal in calendars %}
-      {% if cal and states(cal) == 'on' %}
-        {% set title = state_attr(cal, 'message') | default('RDV') %}
-        {% set start = state_attr(cal, 'start_time') | default('') %}
-        {% if start %}
-          {% set heure = start[11:16] %}
-          {% set ns.rdvs = ns.rdvs + [heure ~ ' - ' ~ title] %}
-        {% else %}
-          {% set ns.rdvs = ns.rdvs + [title] %}
-        {% endif %}
-      {% endif %}
-    {% endfor %}
-    {{ ns.rdvs }}
-
-  appointments: >
-    {% if rdv_list | length == 0 %}
-      {{ ["Pas de RDV aujourd'hui - profitez-en !"] }}
-    {% else %}
-      {{ rdv_list | sort }}
-    {% endif %}
-
 action:
+  - service: calendar.get_events
+    target:
+      entity_id: !input calendar_1
+    data:
+      start_date_time: "{{ now().strftime('%Y-%m-%d') }} 00:00:00"
+      end_date_time: "{{ now().strftime('%Y-%m-%d') }} 23:59:59"
+    response_variable: events_cal1
+
+  - service: calendar.get_events
+    target:
+      entity_id: !input calendar_2
+    data:
+      start_date_time: "{{ now().strftime('%Y-%m-%d') }} 00:00:00"
+      end_date_time: "{{ now().strftime('%Y-%m-%d') }} 23:59:59"
+    response_variable: events_cal2
+    continue_on_error: true
+
+  - service: calendar.get_events
+    target:
+      entity_id: !input calendar_3
+    data:
+      start_date_time: "{{ now().strftime('%Y-%m-%d') }} 00:00:00"
+      end_date_time: "{{ now().strftime('%Y-%m-%d') }} 23:59:59"
+    response_variable: events_cal3
+    continue_on_error: true
+
+  - variables:
+      appointments: >
+        {% set ns = namespace(rdvs=[]) %}
+        {% set evts1 = events_cal1.get(calendar_1_entity, {}).get('events', []) %}
+        {% set evts2 = events_cal2.get(calendar_2_entity, {}).get('events', []) if events_cal2 is defined else [] %}
+        {% set evts3 = events_cal3.get(calendar_3_entity, {}).get('events', []) if events_cal3 is defined else [] %}
+        {% for event in (evts1 + evts2 + evts3) %}
+          {% set start = event.start | default('') %}
+          {% if 'T' in start %}
+            {% set heure = start[11:16] %}
+            {% set ns.rdvs = ns.rdvs + [heure ~ ' - ' ~ event.summary] %}
+          {% else %}
+            {% set ns.rdvs = ns.rdvs + [event.summary] %}
+          {% endif %}
+        {% endfor %}
+        {% if ns.rdvs | length == 0 %}
+          {{ ["Pas de RDV aujourd'hui - profitez-en !"] }}
+        {% else %}
+          {{ ns.rdvs | sort }}
+        {% endif %}
+
   - service: rest_command.peripage_print
     data:
       payload: >-
