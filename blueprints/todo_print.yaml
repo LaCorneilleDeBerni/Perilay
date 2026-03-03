@@ -1,12 +1,12 @@
 blueprint:
-  name: "PeriPage — Liste Todo"
+  name: "Perilay — Liste Todo"
   description: >
     Imprime le contenu d'une liste Todo de Home Assistant sur une imprimante thermique PeriPage.
     Seuls les éléments non complétés sont imprimés.
     Déclenchement manuel via un bouton dans le tableau de bord.
 
     Prérequis :
-      - Addon PeriPage Layout installé et configuré (version 1.3.0+)
+      - Addon Perilay Layout installé et configuré (version 1.4.0+)
       - rest_command.peripage_print_todo configuré dans configuration.yaml
   domain: script
   input:
