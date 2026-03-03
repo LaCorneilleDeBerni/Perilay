@@ -353,6 +353,167 @@ action:
   - service: rest_command.peripage_print
     data:
       payload: >-
+        {"blocks": [{"type": "title", "text": "Bonjour {{ prenom }} !", "align": "center"},{"type": "separator"},{"type": "date", "align": "center", "font_size": 20},{"type": "separator"},{"type": "image_url", "url": "{{ image_url }}"},{"type": "separator"},{"type": "text", "text": "{{ encouragement }}", "align": "center", "font_size": 22},{"type": "separator"},{"type": "title", "text": "Aujourd'hui"},{"type": "list", "items": {{ appointments | tojson }}},{"type": "separator"},{"type": "text", "text": "{{ closing }}", "align": "center"}]}
+
+mode: single
+      icon: mdi:image
+      collapsed: false
+      input:
+        image_count:
+          name: Nombre d'images
+          description: Nombre total d'images disponibles dans votre dossier.
+          selector:
+            entity:
+              domain: input_number
+
+        image_folder:
+          name: Dossier des images
+          description: Chemin relatif depuis /local/ (ex. Maurice, images, photos).
+          default: "images"
+          selector:
+            text:
+
+        image_prefix:
+          name: Préfixe des images
+          description: >
+            Début du nom de vos fichiers avant le numéro.
+            Exemple : Maurice_00001.png → entrez Maurice_
+          default: "image_"
+          selector:
+            text:
+
+    section_encouragement:
+      name: "3 — Phrase d'encouragement"
+      icon: mdi:heart
+      collapsed: false
+      input:
+        encouragements:
+          name: Phrases d'encouragement
+          description: input_select contenant vos phrases d'encouragement.
+          selector:
+            entity:
+              domain: input_select
+
+    section_calendrier:
+      name: "4 — Calendriers"
+      icon: mdi:calendar
+      collapsed: false
+      input:
+        calendar_1:
+          name: Calendrier 1
+          description: Premier calendrier à inclure dans les RDV du jour.
+          selector:
+            entity:
+              domain: calendar
+
+        calendar_2:
+          name: Calendrier 2 (optionnel)
+          description: Deuxième calendrier à inclure.
+          default: ""
+          selector:
+            entity:
+              domain: calendar
+
+        calendar_3:
+          name: Calendrier 3 (optionnel)
+          description: Troisième calendrier à inclure.
+          default: ""
+          selector:
+            entity:
+              domain: calendar
+
+    section_closing:
+      name: "5 — Phrase finale"
+      icon: mdi:star
+      collapsed: false
+      input:
+        closings:
+          name: Phrases finales
+          description: input_select contenant vos phrases finales affectueuses.
+          selector:
+            entity:
+              domain: input_select
+
+    section_connexion:
+      name: "6 — Connexion"
+      icon: mdi:printer
+      collapsed: false
+      input:
+        ha_ip:
+          name: IP de Home Assistant
+          description: Adresse IP locale de votre serveur HA (ex. 192.168.1.100).
+          default: "192.168.1.100"
+          selector:
+            text:
+
+        ha_port:
+          name: Port de l'addon PeriPage Layout
+          description: Port HTTP configuré dans l'addon (défaut 8766).
+          default: 8766
+          selector:
+            number:
+              min: 1024
+              max: 65535
+
+trigger:
+  - platform: time
+    at: !input print_time
+
+variables:
+  prenom: !input prenom
+  image_count_entity: !input image_count
+  image_folder: !input image_folder
+  image_prefix: !input image_prefix
+  encouragements_entity: !input encouragements
+  closings_entity: !input closings
+  calendar_1_entity: !input calendar_1
+  calendar_2_entity: !input calendar_2
+  calendar_3_entity: !input calendar_3
+  ha_ip: !input ha_ip
+  ha_port: !input ha_port
+
+  image_num: >
+    {{ range(1, (states(image_count_entity) | int) + 1) | list | random }}
+  image_url: >
+    {{ 'http://' ~ ha_ip ~ ':8123/local/' ~ image_folder ~ '/' ~ image_prefix
+       ~ (image_num | string).zfill(5) ~ '.png' }}
+
+  encouragement: >
+    {% set opts = state_attr(encouragements_entity, 'options') %}
+    {{ opts | random }}
+
+  closing: >
+    {% set opts = state_attr(closings_entity, 'options') %}
+    {{ opts | random }}
+
+  rdv_list: >
+    {% set calendars = [calendar_1_entity, calendar_2_entity, calendar_3_entity] %}
+    {% set ns = namespace(rdvs=[]) %}
+    {% for cal in calendars %}
+      {% if cal and states(cal) == 'on' %}
+        {% set title = state_attr(cal, 'message') | default('RDV') %}
+        {% set start = state_attr(cal, 'start_time') | default('') %}
+        {% if start %}
+          {% set heure = start[11:16] %}
+          {% set ns.rdvs = ns.rdvs + [heure ~ ' - ' ~ title] %}
+        {% else %}
+          {% set ns.rdvs = ns.rdvs + [title] %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.rdvs }}
+
+  appointments: >
+    {% if rdv_list | length == 0 %}
+      {{ ["Pas de RDV aujourd'hui — profitez-en !"] }}
+    {% else %}
+      {{ rdv_list | sort }}
+    {% endif %}
+
+action:
+  - service: rest_command.peripage_print
+    data:
+      payload: >-
         {"blocks": [{"type": "title", "text": "Bonjour {{ prenom }} !", "align": "center"},{"type": "separator"},{"type": "text", "text": "{{ now().strftime('%A %d %B %Y') }}", "align": "center", "font_size": 20},{"type": "separator"},{"type": "image_url", "url": "{{ image_url }}"},{"type": "separator"},{"type": "text", "text": "{{ encouragement }}", "align": "center", "font_size": 22},{"type": "separator"},{"type": "title", "text": "Aujourd'hui"},{"type": "list", "items": {{ appointments | tojson }}},{"type": "separator"},{"type": "text", "text": "{{ closing }}", "align": "center"}]}
 
 mode: single
