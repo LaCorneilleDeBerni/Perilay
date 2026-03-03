@@ -449,10 +449,14 @@ def render_list(block: dict) -> Image.Image:
     y = padding
     for line, is_first in rendered_lines:
         if is_first:
-            draw_text_with_emoji(draw, (8, y), bullet, font, font_size, fill=0)
-            draw_text_with_emoji(draw, (8 + font_size, y), line, font, font_size, fill=0)
+            # Toujours ajouter un espace entre le bullet et le texte
+            bullet_with_space = bullet.rstrip() + " "
+            bw = measure_text(bullet_with_space, font, font_size)
+            draw_text_with_emoji(draw, (8, y), bullet_with_space, font, font_size, fill=0)
+            draw_text_with_emoji(draw, (8 + bw, y), line, font, font_size, fill=0)
         else:
-            draw_text_with_emoji(draw, (8 + font_size, y), line, font, font_size, fill=0)
+            bw = measure_text(bullet.rstrip() + " ", font, font_size)
+            draw_text_with_emoji(draw, (8 + bw, y), line, font, font_size, fill=0)
         y += lh
     return img
 
