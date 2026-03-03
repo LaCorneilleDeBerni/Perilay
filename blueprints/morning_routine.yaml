@@ -1,39 +1,39 @@
 blueprint:
   name: "Perilay — Routine du matin"
   description: >
-    Imprime chaque matin une page personnalisée sur une imprimante thermique PeriPage.
-    Contenu : titre avec prénom, date du jour, image aléatoire, phrase d'encouragement,
+    Imprime chaque matin une page personnalisee sur une imprimante thermique PeriPage.
+    Contenu : titre avec prenom, date du jour, image aleatoire, phrase d'encouragement,
     rendez-vous du jour, phrase finale.
 
-    Prérequis :
-      - Addon Perilay installé et configuré
-      - rest_command.peripage_print configuré dans configuration.yaml
+    Prerequis :
+      - Addon Perilay installe et configure
+      - rest_command.peripage_print configure dans configuration.yaml
       - Helpers : input_number (nb images), input_select (encouragements), input_select (phrases finales)
-      - Images nommées image_00001.png, image_00002.png... dans /config/www/images/
+      - Images nommees image_00001.png, image_00002.png... dans /config/www/images/
   domain: automation
   input:
 
     section_titre:
-      name: "1 — Titre"
+      name: "1 - Titre"
       icon: mdi:format-title
       collapsed: false
       input:
         prenom:
-          name: Prénom
-          description: Prénom affiché dans le titre (ex. Sophie → "Bonjour Sophie !").
+          name: Prenom
+          description: Prenom affiche dans le titre (ex. Sophie -> "Bonjour Sophie !").
           default: "Sophie"
           selector:
             text:
 
         print_time:
           name: Heure d'impression
-          description: Heure à laquelle la routine est imprimée chaque matin.
+          description: Heure a laquelle la routine est imprimee chaque matin.
           default: "07:00:00"
           selector:
             time:
 
     section_photo:
-      name: "2 — Photo aléatoire"
+      name: "2 - Photo aleatoire"
       icon: mdi:image
       collapsed: false
       input:
@@ -46,22 +46,22 @@ blueprint:
 
         image_folder:
           name: Dossier des images
-          description: Chemin relatif depuis /local/ (ex. Maurice, images, photos).
+          description: "Chemin relatif depuis /local/ (ex. Maurice, images, photos)."
           default: "images"
           selector:
             text:
 
         image_prefix:
-          name: Préfixe des images
+          name: "Prefixe des images"
           description: >
-            Début du nom de vos fichiers avant le numéro.
-            Exemple : Maurice_00001.png → entrez Maurice_
+            Debut du nom de vos fichiers avant le numero.
+            Exemple : Maurice_00001.png -> entrez Maurice_
           default: "image_"
           selector:
             text:
 
     section_encouragement:
-      name: "3 — Phrase d'encouragement"
+      name: "3 - Phrase d'encouragement"
       icon: mdi:heart
       collapsed: false
       input:
@@ -73,20 +73,20 @@ blueprint:
               domain: input_select
 
     section_calendrier:
-      name: "4 — Calendriers"
+      name: "4 - Calendriers"
       icon: mdi:calendar
       collapsed: false
       input:
         calendar_1:
           name: Calendrier 1
-          description: Premier calendrier à inclure dans les RDV du jour.
+          description: Premier calendrier a inclure dans les RDV du jour.
           selector:
             entity:
               domain: calendar
 
         calendar_2:
           name: Calendrier 2 (optionnel)
-          description: Deuxième calendrier à inclure.
+          description: "Deuxieme calendrier a inclure."
           default: ""
           selector:
             entity:
@@ -94,14 +94,14 @@ blueprint:
 
         calendar_3:
           name: Calendrier 3 (optionnel)
-          description: Troisième calendrier à inclure.
+          description: "Troisieme calendrier a inclure."
           default: ""
           selector:
             entity:
               domain: calendar
 
     section_closing:
-      name: "5 — Phrase finale"
+      name: "5 - Phrase finale"
       icon: mdi:star
       collapsed: false
       input:
@@ -113,20 +113,20 @@ blueprint:
               domain: input_select
 
     section_connexion:
-      name: "6 — Connexion"
+      name: "6 - Connexion"
       icon: mdi:printer
       collapsed: false
       input:
         ha_ip:
           name: IP de Home Assistant
-          description: Adresse IP locale de votre serveur HA (ex. 192.168.1.100).
+          description: "Adresse IP locale de votre serveur HA (ex. 192.168.1.100)."
           default: "192.168.1.100"
           selector:
             text:
 
         ha_port:
           name: Port de l'addon Perilay
-          description: Port HTTP configuré dans l'addon (défaut 8766).
+          description: "Port HTTP configure dans l'addon (defaut 8766)."
           default: 8766
           selector:
             number:
@@ -183,7 +183,7 @@ variables:
 
   appointments: >
     {% if rdv_list | length == 0 %}
-      {{ ["Pas de RDV aujourd'hui — profitez-en !"] }}
+      {{ ["Pas de RDV aujourd'hui - profitez-en !"] }}
     {% else %}
       {{ rdv_list | sort }}
     {% endif %}
