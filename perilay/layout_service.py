@@ -495,6 +495,22 @@ def _fit_image(img: Image.Image) -> Image.Image:
     return img.resize((PRINT_WIDTH, new_h), Image.LANCZOS)
 
 
+def render_date(block: dict) -> Image.Image:
+    """
+    Bloc spécial qui formate la date courante selon la locale système.
+    La locale est détectée automatiquement depuis la langue HA au démarrage.
+    Paramètres optionnels :
+      - format : format strftime (défaut: "%A %d %B %Y")
+      - align, font_size, font, bold : identiques au bloc text
+    """
+    import datetime
+    fmt       = block.get("format", "%A %d %B %Y")
+    date_str  = datetime.datetime.now().strftime(fmt)
+    # Capitaliser le premier caractère (lundi → Lundi)
+    date_str  = date_str[0].upper() + date_str[1:] if date_str else date_str
+    return render_text({**block, "text": date_str})
+
+
 BLOCK_RENDERERS = {
     "text":      render_text,
     "title":     render_title,
@@ -502,6 +518,7 @@ BLOCK_RENDERERS = {
     "separator": render_separator,
     "image_url": render_image_url,
     "image_b64": render_image_b64,
+    "date":      render_date,
 }
 
 
