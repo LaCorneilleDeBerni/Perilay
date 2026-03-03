@@ -1,12 +1,12 @@
 blueprint:
-  name: "PeriPage — Routine du matin"
+  name: "Perilay — Routine du matin"
   description: >
     Imprime chaque matin une page personnalisée sur une imprimante thermique PeriPage.
     Contenu : titre avec prénom, date du jour, image aléatoire, phrase d'encouragement,
     rendez-vous du jour, phrase finale.
 
     Prérequis :
-      - Addon PeriPage Layout installé et configuré
+      - Addon Perilay installé et configuré
       - rest_command.peripage_print configuré dans configuration.yaml
       - Helpers : input_number (nb images), input_select (encouragements), input_select (phrases finales)
       - Images nommées image_00001.png, image_00002.png... dans /config/www/images/
