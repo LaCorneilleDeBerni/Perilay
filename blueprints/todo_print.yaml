@@ -6,7 +6,7 @@ blueprint:
     Déclenchement manuel via un bouton dans le tableau de bord.
 
     Prérequis :
-      - Addon Perilay Layout installé et configuré (version 1.4.0+)
+      - Addon Perilay Layout installé et configuré
       - rest_command.peripage_print_todo configuré dans configuration.yaml
   domain: script
   input:
