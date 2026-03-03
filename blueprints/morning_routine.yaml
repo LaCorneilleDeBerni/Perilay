@@ -150,10 +150,27 @@ variables:
   ha_ip: !input ha_ip
   ha_port: !input ha_port
 
-  date_fr: >
-    {% set jours = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'] %}
-    {% set mois = ['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'] %}
-    {{ jours[now().weekday()] }} {{ now().day }} {{ mois[now().month - 1] }} {{ now().year }}
+  jours:
+    - lundi
+    - mardi
+    - mercredi
+    - jeudi
+    - vendredi
+    - samedi
+    - dimanche
+  mois:
+    - janvier
+    - fevrier
+    - mars
+    - avril
+    - mai
+    - juin
+    - juillet
+    - aout
+    - septembre
+    - octobre
+    - novembre
+    - decembre
 
   image_num: >
     {{ range(1, (states(image_count_entity) | int) + 1) | list | random }}
@@ -197,6 +214,6 @@ action:
   - service: rest_command.peripage_print
     data:
       payload: >-
-        {"blocks": [{"type": "title", "text": "Bonjour {{ prenom }} !", "align": "center"},{"type": "separator"},{"type": "text", "text": "{{ date_fr }}", "align": "center", "font_size": 20},{"type": "separator"},{"type": "image_url", "url": "{{ image_url }}"},{"type": "separator"},{"type": "text", "text": "{{ encouragement }}", "align": "center", "font_size": 22},{"type": "separator"},{"type": "title", "text": "Aujourd'hui"},{"type": "list", "items": {{ appointments | tojson }}},{"type": "separator"},{"type": "text", "text": "{{ closing }}", "align": "center"}]}
+        {"blocks": [{"type": "title", "text": "Bonjour {{ prenom }} !", "align": "center"},{"type": "separator"},{"type": "text", "text": "{{ jours[now().weekday()] }} {{ now().day }} {{ mois[now().month - 1] }} {{ now().year }}", "align": "center", "font_size": 20},{"type": "separator"},{"type": "image_url", "url": "{{ image_url }}"},{"type": "separator"},{"type": "text", "text": "{{ encouragement }}", "align": "center", "font_size": 22},{"type": "separator"},{"type": "title", "text": "Aujourd'hui"},{"type": "list", "items": {{ appointments | tojson }}},{"type": "separator"},{"type": "text", "text": "{{ closing }}", "align": "center"}]}
 
 mode: single
