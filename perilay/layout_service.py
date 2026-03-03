@@ -156,7 +156,7 @@ def load_custom_fonts():
             continue
         dest = f"/tmp/custom_font_{name}.ttf"
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "PeriPage-Layout-Addon/1.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": "Perilay-Addon/1.0"})
             with urllib.request.urlopen(req, timeout=15) as resp:
                 # Vérifier la taille avant de lire
                 content_length = resp.headers.get("Content-Length")
@@ -468,7 +468,7 @@ def render_image_url(block: dict) -> Image.Image:
     ok, reason = validate_http_url(url)
     if not ok:
         raise ValueError(f"Bloc image_url : URL refusée — {reason}")
-    req = urllib.request.Request(url, headers={"User-Agent": "PeriPage-Layout-Addon/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "Perilay-Addon/1.0"})
     with urllib.request.urlopen(req, timeout=15) as resp:
         content_length = resp.headers.get("Content-Length")
         if content_length and int(content_length) > MAX_IMAGE_SIZE:
