@@ -495,19 +495,77 @@ def _fit_image(img: Image.Image) -> Image.Image:
     return img.resize((PRINT_WIDTH, new_h), Image.LANCZOS)
 
 
+# Traductions des jours et mois par langue
+_DATE_TRANSLATIONS = {
+    "fr": {
+        "days":   ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"],
+        "months": ["janvier","février","mars","avril","mai","juin",
+                   "juillet","août","septembre","octobre","novembre","décembre"],
+    },
+    "de": {
+        "days":   ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"],
+        "months": ["Januar","Februar","März","April","Mai","Juni",
+                   "Juli","August","September","Oktober","November","Dezember"],
+    },
+    "es": {
+        "days":   ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"],
+        "months": ["enero","febrero","marzo","abril","mayo","junio",
+                   "julio","agosto","septiembre","octubre","noviembre","diciembre"],
+    },
+    "it": {
+        "days":   ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"],
+        "months": ["gennaio","febbraio","marzo","aprile","maggio","giugno",
+                   "luglio","agosto","settembre","ottobre","novembre","dicembre"],
+    },
+    "nl": {
+        "days":   ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"],
+        "months": ["januari","februari","maart","april","mei","juni",
+                   "juli","augustus","september","oktober","november","december"],
+    },
+    "pt": {
+        "days":   ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"],
+        "months": ["janeiro","fevereiro","março","abril","maio","junho",
+                   "julho","agosto","setembro","outubro","novembro","dezembro"],
+    },
+    "en": {
+        "days":   ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "months": ["January","February","March","April","May","June",
+                   "July","August","September","October","November","December"],
+    },
+}
+
+# Langue détectée depuis HA (initialisée à "en" par défaut)
+_HA_LANGUAGE = "en"
+
+
+def _format_date_localized(fmt: str = "%A %d %B %Y") -> str:
+    """
+    Formate la date courante dans la langue HA détectée au démarrage.
+    Traduit manuellement les noms de jours et de mois pour contourner
+    la limitation de musl-libc (Alpine Linux) qui ignore les locales dans strftime.
+    """
+    import datetime
+    now   = datetime.datetime.now()
+    lang  = _HA_LANGUAGE[:2].lower()
+    trans = _DATE_TRANSLATIONS.get(lang, _DATE_TRANSLATIONS["en"])
+
+    day_name   = trans["days"][now.weekday()]
+    month_name = trans["months"][now.month - 1]
+
+    # Remplacer %A (jour) et %B (mois) manuellement, laisser strftime gérer le reste
+    fmt_intermediate = fmt.replace("%A", day_name).replace("%B", month_name)
+    return now.strftime(fmt_intermediate)
+
+
 def render_date(block: dict) -> Image.Image:
     """
-    Bloc spécial qui formate la date courante selon la locale système.
-    La locale est détectée automatiquement depuis la langue HA au démarrage.
+    Bloc spécial qui formate la date courante dans la langue de Home Assistant.
     Paramètres optionnels :
       - format : format strftime (défaut: "%A %d %B %Y")
       - align, font_size, font, bold : identiques au bloc text
     """
-    import datetime
-    fmt       = block.get("format", "%A %d %B %Y")
-    date_str  = datetime.datetime.now().strftime(fmt)
-    # Capitaliser le premier caractère (lundi → Lundi)
-    date_str  = date_str[0].upper() + date_str[1:] if date_str else date_str
+    fmt      = block.get("format", "%A %d %B %Y")
+    date_str = _format_date_localized(fmt)
     return render_text({**block, "text": date_str})
 
 
@@ -898,6 +956,8 @@ def _apply_ha_locale():
                 config = json.loads(resp.read())
             ha_lang = config.get("language", "en")
             log.info(f"Langue HA détectée : {ha_lang}")
+            global _HA_LANGUAGE
+            _HA_LANGUAGE = ha_lang
         except Exception as e:
             log.warning(f"Impossible de récupérer la langue HA : {e}")
 
