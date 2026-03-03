@@ -1,7 +1,6 @@
 # Perilay — Peripage Home Assistant Addon
 
-Addon Home Assistant pour composer et imprimer des pages structurées sur les imprimantes thermiques A6, A6p, A40, et A40p **PeriPage** via Bluetooth. Attention, je n'ai personnellement testé que l'A6.
-## (English below)
+Addon Home Assistant pour composer et imprimer des pages structurées sur les imprimantes thermiques A6, A6p, A40, et A40p **PeriPage** via Bluetooth. Attention, je n'ai personnellement testé que l'A6. **(English below)**
 
 L'addon reçoit une liste de **blocs de contenu** en JSON, compose la page automatiquement (mise en page, word-wrap, redimensionnement des images) et imprime en une seule connexion Bluetooth. 
 
