@@ -1,0 +1,66 @@
+blueprint:
+  name: "PeriPage — Liste Todo"
+  description: >
+    Imprime le contenu d'une liste Todo de Home Assistant sur une imprimante thermique PeriPage.
+    Seuls les éléments non complétés sont imprimés.
+    Déclenchement manuel via un bouton dans le tableau de bord.
+
+    Prérequis :
+      - Addon PeriPage Layout installé et configuré (version 1.3.0+)
+      - rest_command.peripage_print_todo configuré dans configuration.yaml
+  domain: script
+  input:
+
+    section_liste:
+      name: "1 — Liste"
+      icon: mdi:format-list-checks
+      collapsed: false
+      input:
+        todo_entity:
+          name: Liste Todo
+          description: Liste Todo à imprimer (ex. todo.liste_de_courses).
+          selector:
+            entity:
+              domain: todo
+
+        todo_title:
+          name: Titre imprimé
+          description: Titre affiché en haut de la page imprimée.
+          default: "Ma liste"
+          selector:
+            text:
+
+    section_connexion:
+      name: "2 — Connexion"
+      icon: mdi:printer
+      collapsed: false
+      input:
+        ha_ip:
+          name: IP de Home Assistant
+          description: Adresse IP locale de votre serveur HA (ex. 192.168.1.100).
+          default: "192.168.1.100"
+          selector:
+            text:
+
+        ha_port:
+          name: Port de l'addon PeriPage Layout
+          description: Port HTTP configuré dans l'addon (défaut 8766).
+          default: 8766
+          selector:
+            number:
+              min: 1024
+              max: 65535
+
+variables:
+  todo_entity: !input todo_entity
+  todo_title: !input todo_title
+  ha_ip: !input ha_ip
+  ha_port: !input ha_port
+
+sequence:
+  - service: rest_command.peripage_print_todo
+    data:
+      payload: >-
+        {"entity_id": "{{ todo_entity }}", "title": "{{ todo_title }}"}
+
+mode: single
