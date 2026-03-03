@@ -1,8 +1,9 @@
 # Perilay — Peripage Home Assistant Addon
 
-Addon Home Assistant pour composer et imprimer des pages structurées sur une imprimante thermique **PeriPage** via Bluetooth.
+Addon Home Assistant pour composer et imprimer des pages structurées sur les imprimantes thermiques A6, A6p, A40, et A40p **PeriPage** via Bluetooth. Attention, je n'ai personnellement testé que l'A6.
+(English below)
 
-L'addon reçoit une liste de **blocs de contenu** en JSON, compose la page automatiquement (mise en page, word-wrap, redimensionnement des images) et imprime en une seule connexion Bluetooth.
+L'addon reçoit une liste de **blocs de contenu** en JSON, compose la page automatiquement (mise en page, word-wrap, redimensionnement des images) et imprime en une seule connexion Bluetooth. 
 
 ---
 
@@ -263,5 +264,207 @@ Ce projet a été réalisé avec l'aide de [Claude.ai](https://claude.ai). Cré�
 Merci à [bitrate16](https://github.com/bitrate16) pour la librairie `peripage-python` et à [Elias Weingärtner](https://github.com/eliasweingaertner) pour le reverse engineering du protocole.
 
 ## Licence
+
+GPL-3.0
+
+
+# Perilay — PeriPage Home Assistant Addon
+
+A Home Assistant addon to compose and print structured pages on a **PeriPage** thermal printer via Bluetooth.
+
+The addon receives a list of **content blocks** in JSON, automatically lays out the page (word-wrap, image resizing), and prints in a single Bluetooth connection.
+
+## Installation
+
+1. In Home Assistant: **Settings → Add-ons → Add-on Store → ⋮ → Repositories**
+2. Add: `https://github.com/LaCorneilleDeBerni/perilay-addon`
+3. Install **Perilay**
+4. Configure your MAC address and start
+
+> ⚠️ After any configuration change, **restart the addon**.
+
+## Finding Your Printer's MAC Address
+
+From the Home Assistant SSH terminal:
+
+```
+hcitool scan
+```
+
+It is also visible in **Settings → Bluetooth → Devices** as `PeriPage_XXXX_BLE`.
+
+## Configuration
+
+| Parameter | Description | Default |
+| --- | --- | --- |
+| `printer_mac` | Printer Bluetooth MAC address | `XX:XX:XX:XX:XX:XX` |
+| `printer_model` | Model: `A6`, `A6p`, `A40`, `A40p` | `A6` |
+| `font` | Default font: `DejaVu`, `DejaVuBold`, `Liberation` | `DejaVu` |
+| `font_size` | Default font size in pixels | `24` |
+| `port` | HTTP service port | `8766` |
+| `custom_fonts` | Custom fonts (name + .ttf URL) | `[]` |
+
+### Custom Fonts
+
+Place your `.ttf` files in `/config/www/fonts/` and declare them in the configuration:
+
+```
+custom_fonts:
+  - name: "MyFont"
+    url: "http://<HOME_ASSISTANT_IP>:8123/local/fonts/MyFont.ttf"
+```
+
+## Home Assistant Integration
+
+Add to `/config/configuration.yaml`:
+
+```
+rest_command:
+  peripage_print:
+    url: "http://<HOME_ASSISTANT_IP>:8766/print"
+    method: POST
+    content_type: "application/json"
+    payload: "{{ payload }}"
+
+  peripage_print_todo:
+    url: "http://<HOME_ASSISTANT_IP>:8766/print_todo"
+    method: POST
+    content_type: "application/json"
+    payload: "{{ payload }}"
+```
+
+Then restart Home Assistant.
+
+## API Endpoints
+
+| Method | Route | Description |
+| --- | --- | --- |
+| `POST` | `/print` | Compose and print a page from blocks |
+| `POST` | `/print_todo` | Fetch and print a Home Assistant Todo list |
+| `GET` | `/health` | Addon status |
+| `GET` | `/status` | Printer busy or available |
+
+## Block Reference
+
+### `text` — Text
+
+```
+{
+  "type": "text",
+  "text": "Your text here",
+  "align": "left",
+  "font_size": 24,
+  "bold": false,
+  "font": "DejaVu"
+}
+```
+
+| Field | Values | Default |
+| --- | --- | --- |
+| `text` | string | required |
+| `align` | `left` / `center` / `right` | `left` |
+| `font_size` | integer (pixels) | addon config |
+| `bold` | `true` / `false` | `false` |
+| `font` | font name | addon config |
+
+### `title` — Title
+
+Same as `text` but bold and larger by default.
+
+### `list` — List
+
+```
+{
+  "type": "list",
+  "items": ["First item", "Second item"],
+  "bullet": "•",
+  "font_size": 22,
+  "font": "DejaVu"
+}
+```
+
+### `separator` — Separator
+
+```
+{ "type": "separator", "style": "line" }
+```
+
+| Style | Rendering |
+| --- | --- |
+| `line` | Black horizontal line (default) |
+| `dotted` | Black dotted line |
+| `blank` | Empty space |
+
+### `image_url` — Image from URL
+
+```
+{
+  "type": "image_url",
+  "url": "http://<HOME_ASSISTANT_IP>:8123/local/images/photo.png"
+}
+```
+
+### `image_b64` — Base64 Image
+
+```
+{
+  "type": "image_b64",
+  "image": "iVBORw0KGgo..."
+}
+```
+
+## `/print_todo` Endpoint
+
+Automatically fetches uncompleted items from a Home Assistant Todo list and prints them.
+
+```
+curl -X POST http://<HOME_ASSISTANT_IP>:8766/print_todo \
+  -H "Content-Type: application/json" \
+  -d '{"entity_id": "todo.my_list", "title": "My List"}'
+```
+
+## Available Blueprints
+
+| File | Description |
+| --- | --- |
+| `morning_routine.yaml` | Morning routine: random image, encouragement, appointments, final phrase |
+| `weather_print.yaml` | Daily weather summary |
+| `todo_print.yaml` | Print a Home Assistant Todo list |
+
+## Error Handling
+
+- **2 automatic retries** for transient Bluetooth failures (printer busy, out of range)
+- **No retry** on timeout to avoid duplicate prints
+- **10-second delay** between attempts
+- **Persistent notification** in Home Assistant after failure
+- Clear log messages: printer off, out of range, busy, etc.
+
+## Testing from Terminal
+
+```
+# Simple text
+curl -X POST http://<HOME_ASSISTANT_IP>:8766/print \
+  -H "Content-Type: application/json" \
+  -d '{"blocks": [{"type": "text", "text": "Test!"}]}'
+
+# Todo list
+curl -X POST http://<HOME_ASSISTANT_IP>:8766/print_todo \
+  -H "Content-Type: application/json" \
+  -d '{"entity_id": "todo.my_list", "title": "My List"}'
+
+# Status
+curl http://<HOME_ASSISTANT_IP>:8766/health
+curl http://<HOME_ASSISTANT_IP>:8766/status
+```
+
+## Compatibility
+
+Tested on Raspberry Pi 4 (aarch64) with PeriPage A6.
+
+## ⚠️ Disclaimer
+
+This project was created with the help of [Claude.ai](https://claude.ai). Designed to assist a person with ADHD through printed routines.
+
+## License
 
 GPL-3.0
