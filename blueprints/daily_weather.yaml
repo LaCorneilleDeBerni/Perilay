@@ -1,0 +1,131 @@
+blueprint:
+  name: "Perilay — Météo du jour"
+  description: >
+    Imprime chaque matin un résumé météo sur une imprimante thermique PeriPage.
+    Contenu : titre, date, conditions, température actuelle, min/max du jour.
+
+    Prérequis :
+      - Addon Perilay installé et configuré
+      - rest_command.peripage_print configuré dans configuration.yaml
+  domain: automation
+  input:
+
+    section_meteo:
+      name: "1 — Météo"
+      icon: mdi:weather-partly-cloudy
+      collapsed: false
+      input:
+        weather_entity:
+          name: Entité météo
+          description: Entité météo Home Assistant (ex. weather.forecast_home).
+          default: "weather.forecast_home"
+          selector:
+            entity:
+              domain: weather
+
+        print_time:
+          name: Heure d'impression
+          description: Heure à laquelle la météo est imprimée chaque matin.
+          default: "07:30:00"
+          selector:
+            time:
+
+    section_connexion:
+      name: "2 — Connexion"
+      icon: mdi:printer
+      collapsed: false
+      input:
+        ha_ip:
+          name: IP de Home Assistant
+          description: Adresse IP locale de votre serveur HA (ex. 192.168.1.100).
+          default: "192.168.1.100"
+          selector:
+            text:
+
+        ha_port:
+          name: Port de l'addon Perilay
+          description: Port HTTP configuré dans l'addon (défaut 8766).
+          default: 8766
+          selector:
+            number:
+              min: 1024
+              max: 65535
+
+trigger:
+  - platform: time
+    at: !input print_time
+
+variables:
+  weather_entity: !input weather_entity
+  ha_ip: !input ha_ip
+  ha_port: !input ha_port
+
+  # Conditions traduites en français
+  condition_map:
+    clear-night: "Nuit claire ✨"
+    cloudy: "Nuageux ☁️"
+    exceptional: "Conditions exceptionnelles ⚠️"
+    fog: "Brouillard 🌫️"
+    hail: "Grêle 🌨️"
+    lightning: "Orage ⚡"
+    lightning-rainy: "Orage pluvieux ⛈️"
+    partlycloudy: "Partiellement nuageux ⛅"
+    pouring: "Pluie forte 🌧️"
+    rainy: "Pluvieux 🌦️"
+    snowy: "Neigeux ❄️"
+    snowy-rainy: "Neige et pluie 🌨️"
+    sunny: "Ensoleillé ☀️"
+    windy: "Venteux 💨"
+    windy-variant: "Très venteux 💨"
+
+  condition_raw: "{{ states(weather_entity) }}"
+  condition_label: >
+    {{ condition_map.get(condition_raw, condition_raw) }}
+
+  temperature: >
+    {{ state_attr(weather_entity, 'temperature') | round(1) }}°C
+
+  temp_unit: >
+    {{ state_attr(weather_entity, 'temperature_unit') | default('°C') }}
+
+  forecast_today: >
+    {% set forecasts = state_attr(weather_entity, 'forecast') %}
+    {% if forecasts and forecasts | length > 0 %}
+      {{ forecasts[0] }}
+    {% else %}
+      {}
+    {% endif %}
+
+  temp_low: >
+    {% set f = state_attr(weather_entity, 'forecast') %}
+    {% if f and f | length > 0 and f[0].templow is defined %}
+      {{ f[0].templow | round(1) }}°C
+    {% else %}
+      N/A
+    {% endif %}
+
+  temp_high: >
+    {% set f = state_attr(weather_entity, 'forecast') %}
+    {% if f and f | length > 0 and f[0].temperature is defined %}
+      {{ f[0].temperature | round(1) }}°C
+    {% else %}
+      N/A
+    {% endif %}
+
+action:
+  - service: rest_command.peripage_print
+    data:
+      payload: >-
+        {"blocks": [
+          {"type": "title", "text": "Météo du Jour", "align": "center"},
+          {"type": "text", "text": "{{ now().strftime('%A %d %B %Y') }}", "align": "center", "font_size": 20},
+          {"type": "separator", "style": "line"},
+          {"type": "text", "text": "{{ condition_label }}", "align": "center", "font_size": 26, "bold": true},
+          {"type": "separator", "style": "blank"},
+          {"type": "text", "text": "Actuellement : {{ temperature }}", "align": "center", "font_size": 24},
+          {"type": "separator", "style": "blank"},
+          {"type": "list", "items": ["Min : {{ temp_low }}", "Max : {{ temp_high }}"], "bullet": "▸", "font_size": 22},
+          {"type": "separator", "style": "dotted"}
+        ]}
+
+mode: single
