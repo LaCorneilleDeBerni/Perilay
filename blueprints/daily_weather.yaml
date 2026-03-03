@@ -92,6 +92,11 @@ variables:
   night_conditions:
     - clear-night
 
+  date_fr: >
+    {% set jours = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'] %}
+    {% set mois = ['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'] %}
+    {{ jours[now().weekday()] }} {{ now().day }} {{ mois[now().month - 1] }} {{ now().year }}
+
   condition_raw: "{{ states(weather_entity) }}"
   condition_label: "{{ condition_map.get(condition_raw, condition_raw) }}"
 
@@ -156,13 +161,13 @@ action:
               payload: >-
                 {"blocks": [
                   {"type": "title", "text": "Meteo du Jour", "align": "center"},
-                  {"type": "text", "text": "{{ now().strftime('%A %d %B %Y') }}", "align": "center", "font_size": 20},
+                  {"type": "date", "align": "center", "font_size": 20},
                   {"type": "separator", "style": "line"},
                   {"type": "text", "text": "{{ condition_label }}", "align": "center", "font_size": 26, "bold": true},
                   {"type": "separator", "style": "blank"},
                   {"type": "text", "text": "Actuellement : {{ temperature }}", "align": "center", "font_size": 24},
                   {"type": "separator", "style": "blank"},
-                  {"type": "list", "items": ["Min : {{ temp_low }}", "Max : {{ temp_high }}", "Humidite : {{ humidity }}", "Vent : {{ wind_speed }}", "Pression : {{ pressure }}"], "bullet": "->", "font_size": 22},
+                  {"type": "list", "items": ["Min : {{ temp_low }}", "Max : {{ temp_high }}", "Humidite : {{ humidity }}", "Vent : {{ wind_speed }}", "Pression : {{ pressure }}"], "bullet": "-> ", "font_size": 22},
                   {"type": "separator", "style": "dotted"}
                 ]}
     default:
@@ -171,13 +176,13 @@ action:
           payload: >-
             {"blocks": [
               {"type": "title", "text": "Meteo du Jour", "align": "center"},
-              {"type": "text", "text": "{{ now().strftime('%A %d %B %Y') }}", "align": "center", "font_size": 20},
+              {"type": "date", "align": "center", "font_size": 20},
               {"type": "separator", "style": "line"},
               {"type": "text", "text": "{{ condition_label }}", "align": "center", "font_size": 26, "bold": true},
               {"type": "separator", "style": "blank"},
               {"type": "text", "text": "Actuellement : {{ temperature }}", "align": "center", "font_size": 24},
               {"type": "separator", "style": "blank"},
-              {"type": "list", "items": ["Min : {{ temp_low }}", "Max : {{ temp_high }}", "Humidite : {{ humidity }}", "Vent : {{ wind_speed }}", "Pression : {{ pressure }}"], "bullet": "->", "font_size": 22},
+              {"type": "list", "items": ["Min : {{ temp_low }}", "Max : {{ temp_high }}", "Humidite : {{ humidity }}", "Vent : {{ wind_speed }}", "Pression : {{ pressure }}"], "bullet": "-> ", "font_size": 22},
               {"type": "separator", "style": "line"},
               {"type": "text", "text": "{{ closing_phrase | trim }}", "align": "center", "font_size": 22}
             ]}
