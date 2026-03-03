@@ -17,6 +17,7 @@ import os
 import re
 import time
 import ipaddress
+import locale
 
 import peripage as pp
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -842,10 +843,67 @@ class LayoutHandler(BaseHTTPRequestHandler):
 # Démarrage
 # ------------------------------------------------------------------
 
+# Correspondance langue HA -> locale système
+_HA_LANG_TO_LOCALE = {
+    "fr": ("fr_FR.UTF-8", "fr_FR.utf8", "fr_FR", "fr"),
+    "en": ("en_US.UTF-8", "en_US.utf8", "en_US", "en"),
+    "de": ("de_DE.UTF-8", "de_DE.utf8", "de_DE", "de"),
+    "es": ("es_ES.UTF-8", "es_ES.utf8", "es_ES", "es"),
+    "it": ("it_IT.UTF-8", "it_IT.utf8", "it_IT", "it"),
+    "nl": ("nl_NL.UTF-8", "nl_NL.utf8", "nl_NL", "nl"),
+    "pt": ("pt_PT.UTF-8", "pt_PT.utf8", "pt_PT", "pt"),
+    "pl": ("pl_PL.UTF-8", "pl_PL.utf8", "pl_PL", "pl"),
+    "ru": ("ru_RU.UTF-8", "ru_RU.utf8", "ru_RU", "ru"),
+    "zh": ("zh_CN.UTF-8", "zh_CN.utf8", "zh_CN", "zh"),
+    "ja": ("ja_JP.UTF-8", "ja_JP.utf8", "ja_JP", "ja"),
+}
+
+
+def _apply_ha_locale():
+    """
+    Récupère la langue configurée dans Home Assistant via l'API supervisor
+    et applique la locale système correspondante pour strftime.
+    Fallback sur la locale système par défaut si non disponible.
+    """
+    ha_lang = None
+    token = os.environ.get("SUPERVISOR_TOKEN", "")
+    if token:
+        try:
+            req = urllib.request.Request(
+                "http://supervisor/core/api/config",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                config = json.loads(resp.read())
+            ha_lang = config.get("language", "en")
+            log.info(f"Langue HA détectée : {ha_lang}")
+        except Exception as e:
+            log.warning(f"Impossible de récupérer la langue HA : {e}")
+
+    # Chercher les locales candidates pour cette langue
+    lang_key = (ha_lang or "en")[:2].lower()
+    candidates = _HA_LANG_TO_LOCALE.get(lang_key, ("",))
+
+    for loc in candidates:
+        if not loc:
+            continue
+        try:
+            locale.setlocale(locale.LC_TIME, loc)
+            log.info(f"Locale appliquée : {loc}")
+            return
+        except locale.Error:
+            continue
+
+    log.warning(f"Aucune locale disponible pour '{ha_lang}' — dates en anglais par défaut")
+
+
 def main():
     if not validate_mac(PRINTER_MAC):
         log.error(f"Adresse MAC invalide ou placeholder : '{PRINTER_MAC}'")
         sys.exit(1)
+
+    # Récupérer la langue configurée dans HA et appliquer la locale correspondante
+    _apply_ha_locale()
 
     log.info(f"Perilay démarré — port {PORT}")
     log.info(f"Imprimante : {PRINTER_MODEL} @ {PRINTER_MAC}")
